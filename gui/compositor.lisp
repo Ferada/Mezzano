@@ -445,6 +445,18 @@ A passive drag sends no drag events to the window.")
                 *passive-drag* t
                 *resize-origin* nil)
           (activate-window win))
+        (when (and (logbitp 1 buttons)
+                   (logbitp 1 changes)
+                   (member :meta *keyboard-modifier-state*)
+                   (not (eql (layer win) :bottom)))
+          ;; Meta + right down, start a passive resize.
+          (setf *drag-x-origin* *mouse-x*
+                *drag-y-origin* *mouse-y*
+                *drag-window* win
+                (values *drag-x* *drag-y*) (screen-to-window-coordinates win *mouse-x* *mouse-y*)
+                *passive-drag* nil
+                *resize-origin* :bottom-right)
+          (activate-window win))
         (when (and (logbitp 0 buttons)
                    (logbitp 0 changes)
                    (not (eql win *active-window*)))
@@ -496,10 +508,12 @@ A passive drag sends no drag events to the window.")
              (cursor-height (mezzano.gui:surface-height cursor-surface)))
         (expand-clip-rectangle (- old-x hot-x) (- old-y hot-y) cursor-width cursor-height)
         (expand-clip-rectangle (- new-x hot-x) (- new-y hot-y) cursor-width cursor-height)))
-    (when (and (not (logbitp 0 buttons))
-               (logbitp 0 changes)
+    (when (and (or (and (not (logbitp 0 buttons))
+                        (logbitp 0 changes))
+                   (and (not (logbitp 1 buttons))
+                        (logbitp 1 changes)))
                *drag-window*)
-      ;; Left click release, stop drag.
+      ;; Left/right click release, stop drag.
       (setf *drag-window* nil))))
 
 (defun submit-mouse (buttons x-motion y-motion)
