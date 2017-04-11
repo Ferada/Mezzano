@@ -136,9 +136,10 @@
 
 (defun handle-client (*client*)
   (ignore-errors
-    (let ((*file-table* (make-array 8 :initial-element nil)))
-      (unwind-protect
-           (loop
+   (with-standard-io-syntax
+     (let ((*file-table* (make-array 8 :initial-element nil)))
+       (unwind-protect
+            (loop
               (let ((form (read-preserving-whitespace *client*)))
                 (format t "Command: ~S~%" form)
                 (cond
@@ -160,10 +161,10 @@
                                        (format nil "~A" c))))
                            (format *client* "(:invalid-command \"Invalid command\")"))))))
               (finish-output *client*))
-        (loop for file across *file-table*
-           do (when file (close file)))
-        (finish-output *client*)
-        (format t "Client closed.~%")))))
+         (loop for file across *file-table*
+               do (when file (close file)))
+         (finish-output *client*)
+         (format t "Client closed.~%"))))))
 
 #-sbcl
 (defun run-file-server (&key (port *default-file-server-port*))
