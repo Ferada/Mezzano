@@ -29,6 +29,16 @@
   (let ((address (logand (lisp-object-address function) -16)))
     (memref-unsigned-byte-8 address offset)))
 
+;; TODO: ugh. start of disassembly looks correct, end doesn't
+(defun function-machine-code-bytes (function)
+  (check-type function function)
+  (let* ((n-constants (function-pool-size function))
+         (mc-size (function-code-size function))
+         (address (logand (lisp-object-address function) -16))
+         (vector (make-array (- mc-size (* n-constants 8)) :element-type '(unsigned-byte 8))))
+    (dotimes (i (- mc-size (* n-constants 8)) vector)
+      (setf (aref vector i) (memref-unsigned-byte-8 (+ address 16) i)))))
+
 (defun function-gc-info (function)
   "Return the address of and the number of bytes in FUNCTION's GC info."
   (check-type function function)
