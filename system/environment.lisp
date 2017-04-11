@@ -21,18 +21,29 @@ A list of two elements, the short & long name." )
 (defmethod documentation (x doc-type) nil)
 (defmethod (setf documentation) (new-value x doc-type) new-value)
 
-(defun map-apropos (fn string package)
+(defun map-apropos (fn string package external-only)
   (setf string (string string))
-  (cond (package
-         (do-symbols (sym package)
-           (when (search string (symbol-name sym) :test #'string-equal)
+  (flet ((check (sym)
+           (when (search string (symbol-name sym) :test #'char-equal)
              (funcall fn sym))))
-        (t
-         (do-all-symbols (sym)
-           (when (search string (symbol-name sym) :test #'string-equal)
-             (funcall fn sym))))))
+    (cond (package
+           (if external-only
+               (do-external-symbols (sym package)
+                 (check sym))
+               (do-symbols (sym package)
+                 (check sym))))
+          (external-only
+           (do-all-symbols (sym)
+             (multiple-value-bind (present-symbol status)
+                 (find-symbol (symbol-name sym) (symbol-package sym))
+               (when (and (eq sym present-symbol)
+                          (eq status :external))
+                 (check sym)))))
+          (t
+           (do-all-symbols (sym)
+             (check sym))))))
 
-(defun apropos (string &optional package)
+(defun apropos (string &optional package external-only)
   (map-apropos (lambda (sym)
                  (let ((info '()))
                    (when (boundp sym) (push "bound" info))
@@ -40,14 +51,14 @@ A list of two elements, the short & long name." )
                    (if info
                        (format t "~S ~A~%" sym info)
                        (format t "~S~%" sym))))
-               string package)
+               string package external-only)
   (values))
 
-(defun apropos-list (string &optional package)
+(defun apropos-list (string &optional package external-only)
   (let ((syms '()))
     (map-apropos (lambda (sym)
                    (pushnew sym syms))
-                 string package)
+                 string package external-only)
     syms))
 
 ;;; 25.1.1 Top Level Loop.
